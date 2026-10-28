@@ -1,50 +1,75 @@
+use sha2::{Digest, Sha256};
+
 use crate::{CanonicalNode, PropertyValue};
 
 const NODE_DOMAIN: &[u8] = b"structaura:node:v1\0";
 
+pub(crate) trait ByteSink {
+    fn write(&mut self, bytes: &[u8]);
+}
+
+impl ByteSink for Vec<u8> {
+    fn write(&mut self, bytes: &[u8]) {
+        self.extend_from_slice(bytes);
+    }
+}
+
+impl ByteSink for Sha256 {
+    fn write(&mut self, bytes: &[u8]) {
+        self.update(bytes);
+    }
+}
+
 pub(crate) fn encode_node(node: &CanonicalNode, child_hashes: &[[u8; 32]]) -> Vec<u8> {
     let mut output = Vec::new();
-    output.extend_from_slice(NODE_DOMAIN);
-    output.extend_from_slice(&node.kind().value().to_be_bytes());
-    output.extend_from_slice(&(node.properties().len() as u64).to_be_bytes());
+    write_node_prefix(&mut output, node, child_hashes.len());
+    for hash in child_hashes {
+        output.write(hash);
+    }
+    output
+}
+
+pub(crate) fn write_node_prefix(
+    sink: &mut impl ByteSink,
+    node: &CanonicalNode,
+    child_count: usize,
+) {
+    sink.write(NODE_DOMAIN);
+    sink.write(&node.kind().value().to_be_bytes());
+    sink.write(&(node.properties().len() as u64).to_be_bytes());
 
     for property in node.properties() {
-        write_bytes(&mut output, property.key().as_bytes());
+        write_bytes(sink, property.key().as_bytes());
         match property.value() {
             PropertyValue::Text(value) => {
-                output.push(1);
-                write_bytes(&mut output, value.as_bytes());
+                sink.write(&[1]);
+                write_bytes(sink, value.as_bytes());
             }
             PropertyValue::Bool(value) => {
-                output.push(2);
-                output.push(u8::from(*value));
+                sink.write(&[2]);
+                sink.write(&[u8::from(*value)]);
             }
             PropertyValue::Signed(value) => {
-                output.push(3);
-                output.extend_from_slice(&value.to_be_bytes());
+                sink.write(&[3]);
+                sink.write(&value.to_be_bytes());
             }
             PropertyValue::Unsigned(value) => {
-                output.push(4);
-                output.extend_from_slice(&value.to_be_bytes());
+                sink.write(&[4]);
+                sink.write(&value.to_be_bytes());
             }
             PropertyValue::Bytes(value) => {
-                output.push(5);
-                write_bytes(&mut output, value);
+                sink.write(&[5]);
+                write_bytes(sink, value);
             }
         }
     }
 
-    output.extend_from_slice(&(child_hashes.len() as u64).to_be_bytes());
-    for hash in child_hashes {
-        output.extend_from_slice(hash);
-    }
-
-    output
+    sink.write(&(child_count as u64).to_be_bytes());
 }
 
-fn write_bytes(output: &mut Vec<u8>, value: &[u8]) {
-    output.extend_from_slice(&(value.len() as u64).to_be_bytes());
-    output.extend_from_slice(value);
+fn write_bytes(sink: &mut impl ByteSink, value: &[u8]) {
+    sink.write(&(value.len() as u64).to_be_bytes());
+    sink.write(value);
 }
 
 #[cfg(feature = "bench-internals")]
@@ -76,5 +101,19 @@ mod tests {
         let right = node(vec![Property::new("a", "bc")]);
 
         assert_ne!(encode_node(&left, &[]), encode_node(&right, &[]));
+    }
+
+    #[test]
+    fn streamed_encoding_matches_buffered_encoding() {
+        use sha2::{Digest, Sha256};
+
+        let value = node(vec![Property::new("name", "value")]);
+        let encoded = encode_node(&value, &[]);
+        let mut streamed = Sha256::new();
+        super::write_node_prefix(&mut streamed, &value, 0);
+        let streamed_digest: [u8; 32] = streamed.finalize().into();
+        let encoded_digest: [u8; 32] = Sha256::digest(&encoded).into();
+
+        assert_eq!(streamed_digest, encoded_digest);
     }
 }
