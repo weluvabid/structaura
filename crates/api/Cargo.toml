@@ -1,0 +1,15 @@
+[package]
+name = "structaura"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+structaura-core = { path = "../core" }
+structaura-javascript = { path = "../javascript" }
+structaura-typescript = { path = "../typescript" }
+
+[lints]
+workspace = true
