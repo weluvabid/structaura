@@ -47,6 +47,12 @@ fn write_bytes(output: &mut Vec<u8>, value: &[u8]) {
     output.extend_from_slice(value);
 }
 
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub fn encode_node_for_benchmark(node: &CanonicalNode, child_hashes: &[[u8; 32]]) -> Vec<u8> {
+    encode_node(node, child_hashes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::encode_node;

@@ -248,6 +248,7 @@ dependencies = [
  "structaura-core",
  "structaura-javascript",
  "structaura-typescript",
+ "tree-sitter",
 ]
 
 [[package]]

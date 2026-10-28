@@ -9,3 +9,7 @@ pub use fingerprint::{
 };
 pub use ir::{CanonicalNode, NodeKind, Property, PropertyValue, StructuralNodeError};
 pub use merkle::hash_node;
+
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub use encoding::encode_node_for_benchmark;

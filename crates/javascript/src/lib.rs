@@ -76,6 +76,15 @@ fn canonicalize(node: Node<'_>, source: &str) -> Result<CanonicalNode, JavaScrip
         .map_err(|error| JavaScriptError::Canonicalization(error.to_string()))
 }
 
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub fn canonicalize_for_benchmark(
+    node: Node<'_>,
+    source: &str,
+) -> Result<CanonicalNode, JavaScriptError> {
+    canonicalize(node, source)
+}
+
 fn string_contents(node: Node<'_>, source: &str) -> String {
     let raw = node_text(node, source);
     if raw.len() >= 2 { raw[1..raw.len() - 1].to_owned() } else { raw }
