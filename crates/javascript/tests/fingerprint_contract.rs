@@ -72,3 +72,30 @@ fn operator_changes_change_fingerprint() {
 
     assert_ne!(addition.digest(), subtraction.digest());
 }
+
+#[test]
+fn deeply_nested_valid_expression_fingerprints_without_recursive_traversal() {
+    let depth = 1024;
+    let source = format!("const value = {}{};", "[".repeat(depth), "]".repeat(depth));
+
+    assert!(fingerprint_javascript(&source).is_ok());
+}
+
+#[test]
+fn deeply_nested_malformed_source_returns_syntax_diagnostics() {
+    let depth = 1024;
+    let source = format!("const value = {}0;", "[".repeat(depth));
+
+    let error = fingerprint_javascript(&source).unwrap_err();
+    match error {
+        JavaScriptError::Syntax(diagnostics) => {
+            assert!(!diagnostics.is_empty());
+            assert!(
+                diagnostics
+                    .windows(2)
+                    .all(|pair| { pair[0].byte_range().start <= pair[1].byte_range().start })
+            );
+        }
+        other => panic!("expected syntax diagnostics, got {other:?}"),
+    }
+}

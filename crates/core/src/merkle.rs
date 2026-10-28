@@ -3,14 +3,29 @@ use sha2::{Digest, Sha256};
 use crate::{CanonicalNode, encoding::write_node_prefix};
 
 pub fn hash_node(node: &CanonicalNode) -> [u8; 32] {
-    let mut hasher = Sha256::new();
-    write_node_prefix(&mut hasher, node, node.children().len());
+    let mut pending = vec![(node, false)];
+    let mut completed = Vec::new();
 
-    for child in node.children() {
-        hasher.update(hash_node(child));
+    while let Some((node, visited)) = pending.pop() {
+        if !visited {
+            pending.push((node, true));
+            pending.extend(node.children().iter().rev().map(|child| (child, false)));
+            continue;
+        }
+
+        let child_count = node.children().len();
+        let split = completed.len() - child_count;
+        let mut hasher = Sha256::new();
+        write_node_prefix(&mut hasher, node, child_count);
+        for hash in &completed[split..] {
+            hasher.update(hash);
+        }
+        let digest = hasher.finalize().into();
+        completed.truncate(split);
+        completed.push(digest);
     }
 
-    hasher.finalize().into()
+    completed.pop().expect("root hash completed")
 }
 
 #[cfg(test)]
