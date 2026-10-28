@@ -86,11 +86,11 @@ pub fn canonicalize_for_benchmark(
 
 fn string_contents(node: Node<'_>, source: &str) -> String {
     let raw = node_text(node, source);
-    if raw.len() >= 2 { raw[1..raw.len() - 1].to_owned() } else { raw }
+    if raw.len() >= 2 { raw[1..raw.len() - 1].to_owned() } else { raw.to_owned() }
 }
 
-fn node_text(node: Node<'_>, source: &str) -> String {
-    source.get(node.byte_range()).unwrap_or_default().to_owned()
+fn node_text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
+    source.get(node.byte_range()).unwrap_or_default()
 }
 
 fn is_comment(node: Node<'_>) -> bool {
@@ -102,7 +102,7 @@ fn is_formatting_punctuation(node: Node<'_>, source: &str) -> bool {
         return false;
     }
 
-    matches!(node_text(node, source).as_str(), ";" | "," | "(" | ")" | "{" | "}" | "[" | "]" | ":")
+    matches!(node_text(node, source), ";" | "," | "(" | ")" | "{" | "}" | "[" | "]" | ":")
 }
 
 fn collect_errors(node: Node<'_>, diagnostics: &mut Vec<SyntaxDiagnostic>) {
