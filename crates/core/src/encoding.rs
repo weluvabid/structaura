@@ -20,6 +20,7 @@ impl ByteSink for Sha256 {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn encode_node(node: &CanonicalNode, child_hashes: &[[u8; 32]]) -> Vec<u8> {
     let mut output = Vec::new();
     write_node_prefix(&mut output, node, child_hashes.len());
