@@ -10,6 +10,7 @@ publish.workspace = true
 bench-internals = []
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
 sha2.workspace = true
 
 [lints]

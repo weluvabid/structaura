@@ -3,11 +3,11 @@ use std::fmt;
 use std::ops::Range;
 
 use structaura_core::{
-    CanonicalNode, Fingerprint, FingerprintIdentity, NodeKind, Property, fingerprint,
+    CanonicalNode, Fingerprint, FingerprintIdentity, SyntaxNodeRecord, canonicalize_syntax_nodes,
+    fingerprint,
 };
 use tree_sitter::{Node, Parser, Tree};
 
-const SYNTAX_NODE_KIND: u32 = 1;
 const NORMALIZATION_VERSION: u32 = 1;
 
 /// Fingerprints JavaScript source using Structaura's versioned canonical representation.
@@ -39,73 +39,29 @@ pub fn parse(source: &str) -> Result<Tree, JavaScriptError> {
 }
 
 fn canonicalize(node: Node<'_>, source: &str) -> Result<CanonicalNode, JavaScriptError> {
-    let mut pending = vec![CanonicalizeTask::Visit(node)];
-    let mut completed = Vec::new();
+    let mut pending = vec![node];
+    let mut records = Vec::new();
 
-    while let Some(task) = pending.pop() {
-        match task {
-            CanonicalizeTask::Visit(node) => {
-                if let Some(expression) = transparent_parenthesized_expression(node) {
-                    pending.push(CanonicalizeTask::Visit(expression));
-                    continue;
-                }
-
-                let children = canonical_children(node, source);
-                pending.push(CanonicalizeTask::Build { node, child_count: children.len() });
-                pending.extend(children.into_iter().rev().map(CanonicalizeTask::Visit));
-            }
-            CanonicalizeTask::Build { node, child_count } => {
-                let mut children = Vec::with_capacity(child_count);
-                for _ in 0..child_count {
-                    children.push(completed.pop().expect("child canonicalization completed"));
-                }
-                children.reverse();
-
-                let kind = NodeKind::new(SYNTAX_NODE_KIND).expect("static node kind is valid");
-                let mut properties = vec![Property::new("syntax_kind", node.kind())];
-
-                if node.kind() == "string" {
-                    properties.push(Property::new("literal", string_contents(node, source)));
-                } else if node.child_count() == 0 {
-                    properties.push(Property::new("token", node_text(node, source)));
-                }
-
-                let canonical = CanonicalNode::new(kind, properties, children)
-                    .map_err(|error| JavaScriptError::Canonicalization(error.to_string()))?;
-                completed.push(canonical);
-            }
-        }
+    while let Some(node) = pending.pop() {
+        let children =
+            (0..node.child_count()).filter_map(|index| node.child(index)).collect::<Vec<_>>();
+        records.push(SyntaxNodeRecord {
+            syntax_kind: node.kind().to_owned(),
+            text: if node.kind() == "string" || node.child_count() == 0 {
+                node_text(node, source).to_owned()
+            } else {
+                String::new()
+            },
+            is_named: node.is_named(),
+            child_count: u32::try_from(children.len()).map_err(|_| {
+                JavaScriptError::Canonicalization("syntax node exceeds u32 child limit".to_owned())
+            })?,
+        });
+        pending.extend(children.into_iter().rev());
     }
 
-    Ok(completed.pop().expect("root canonicalization completed"))
-}
-
-enum CanonicalizeTask<'tree> {
-    Visit(Node<'tree>),
-    Build { node: Node<'tree>, child_count: usize },
-}
-
-fn transparent_parenthesized_expression<'tree>(node: Node<'tree>) -> Option<Node<'tree>> {
-    if node.kind() != "parenthesized_expression" {
-        return None;
-    }
-
-    let mut expressions = (0..node.named_child_count())
-        .filter_map(|index| node.named_child(index))
-        .filter(|child| !is_comment(*child));
-    let expression = expressions.next()?;
-    expressions.next().is_none().then_some(expression)
-}
-
-fn canonical_children<'tree>(node: Node<'tree>, source: &str) -> Vec<Node<'tree>> {
-    if node.kind() == "string" {
-        return Vec::new();
-    }
-
-    (0..node.child_count())
-        .filter_map(|index| node.child(index))
-        .filter(|child| !is_comment(*child) && !is_formatting_punctuation(*child, source))
-        .collect()
+    canonicalize_syntax_nodes(&records)
+        .map_err(|error| JavaScriptError::Canonicalization(error.to_string()))
 }
 
 #[cfg(feature = "bench-internals")]
@@ -117,25 +73,8 @@ pub fn canonicalize_for_benchmark(
     canonicalize(node, source)
 }
 
-fn string_contents(node: Node<'_>, source: &str) -> String {
-    let raw = node_text(node, source);
-    if raw.len() >= 2 { raw[1..raw.len() - 1].to_owned() } else { raw.to_owned() }
-}
-
 fn node_text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
     source.get(node.byte_range()).unwrap_or_default()
-}
-
-fn is_comment(node: Node<'_>) -> bool {
-    node.kind() == "comment"
-}
-
-fn is_formatting_punctuation(node: Node<'_>, source: &str) -> bool {
-    if node.is_named() || node.child_count() != 0 {
-        return false;
-    }
-
-    matches!(node_text(node, source), ";" | "," | "(" | ")" | "{" | "}" | "[" | "]" | ":")
 }
 
 fn collect_errors(node: Node<'_>, diagnostics: &mut Vec<SyntaxDiagnostic>) {

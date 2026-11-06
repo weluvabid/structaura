@@ -24,3 +24,6 @@ dist/
 
 # Coverage
 coverage/
+
+# Generated WebAssembly package
+/pkg/

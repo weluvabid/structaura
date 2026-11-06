@@ -17,3 +17,25 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: ./scripts/check.sh
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+      - uses: Swatinem/rust-cache@v2
+      - run: npm install
+      - name: Test WebAssembly bindings in Node.js
+        run: wasm-pack test --node crates/wasm
+      - name: Build browser package
+        run: npm run build
+      - name: Test browser package integration
+        run: npm test
+      - name: Validate npm package contents
+        run: npm pack --dry-run

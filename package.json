@@ -1,7 +1,40 @@
 {
   "name": "structaura",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "description": "Deterministic AST fingerprinting for JavaScript and TypeScript."
+  "description": "Deterministic AST fingerprinting for JavaScript and TypeScript, powered by Rust and WebAssembly.",
+  "sideEffects": false,
+  "files": [
+    "pkg",
+    "src",
+    "README.md",
+    "docs",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "scripts": {
+    "build:wasm": "wasm-pack build crates/wasm --target web --release --out-dir ../../pkg",
+    "build:grammars": "sh scripts/build-grammars.sh",
+    "build": "npm run build:wasm && npm run build:grammars",
+    "test:wasm": "wasm-pack test --node crates/wasm",
+    "prepublishOnly": "npm run build",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "web-tree-sitter": "0.27.1"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "0.27.1"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "allowScripts": {
+    "tree-sitter-cli@0.27.1": true
+  }
 }
