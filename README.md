@@ -141,13 +141,22 @@ The hook runs formatting, Clippy with warnings denied, and the Rust workspace te
 
 ## Benchmarks
 
+StructAura measures the complete parse-to-fingerprint path for JavaScript and TypeScript, from
+small source snippets to inputs of roughly 70 KB. In the recorded release-build run, small inputs
+completed in under 116 µs median latency; the largest measured inputs completed in approximately
+12–14 ms at p95. The benchmark also exposes parse, canonicalization, encoding, and Merkle stages
+for deeper pipeline analysis.
+
+See [benchmark results and methodology](docs/benchmarks.md) for the complete measurements,
+sample methodology, and reproduction command:
+
 ```sh
 ./scripts/bench.sh
 ```
 
-The harness measures the public API across small, medium, and large generated source files. It reports source size, median latency, p95 sample latency, and input throughput. Each reported latency is the per-operation average within a sample; median and p95 are calculated across 15 samples after five warm-up operations.
+![StructAura benchmark run](benchmarks/structaura-benchmark.gif)
 
-For comparable results, record `rustc -Vv`, the operating system, and CPU model, and run on an otherwise idle machine. Compare results from the same machine and toolchain. These numbers measure the full parse-to-fingerprint path.
+The recording is generated with VHS using [`benchmarks/benchmark.tape`](benchmarks/benchmark.tape).
 
 ## License
 
