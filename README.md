@@ -1,28 +1,28 @@
-# Structaura
+# StructAura
 
-Deterministic AST fingerprinting for JavaScript and TypeScript, implemented in Rust and exposed to browser JavaScript through WebAssembly.
+Deterministic AST fingerprinting for JavaScript and TypeScript.
 
-Structaura parses source into a syntax tree, normalizes selected syntax-only differences, and computes a versioned SHA-256 Merkle fingerprint. Formatting and comments can change without changing the fingerprint; structural changes should change it.
+StructAura parses source into a syntax tree, applies a limited set of syntax-only normalizations, and produces a versioned SHA-256 Merkle fingerprint. Formatting and comments can change without changing the fingerprint; structural changes should change it.
 
-> **Scope:** Structaura is a structural fingerprinting tool, not a JavaScript runtime, type checker, semantic-equivalence prover, or source formatter.
+> **Scope:** StructAura is a structural fingerprinting tool. It is not a JavaScript runtime, type checker, semantic-equivalence prover, or source formatter.
 
 ## Features
 
-- JavaScript and TypeScript parsing with Tree-sitter.
-- Deterministic canonical representation and domain-separated SHA-256 hashing.
-- Explicit fingerprint-format and language-normalization versions.
-- Compatibility checks that reject fingerprints from different languages or versions.
-- Syntax errors surfaced as JavaScript `Error` objects with useful diagnostics.
-- Browser-facing WebAssembly package backed by the same Rust implementation.
-- Iterative AST canonicalization and Merkle traversal to avoid recursive traversal in the application code.
+- JavaScript and TypeScript parsing via Tree-sitter
+- Deterministic canonical representation and domain-separated SHA-256 hashing
+- Explicit fingerprint-format and language-normalization versions
+- Compatibility checks that reject fingerprints from different languages or versions
+- Syntax errors surfaced as JavaScript `Error` objects with useful diagnostics
+- Browser-facing WebAssembly package backed by the same Rust core
+- Iterative AST canonicalization and Merkle traversal (no recursive application-level traversal)
 
 ## Install
 
 ```sh
-npm install structaura
+npm install @weluvabid/structaura
 ```
 
-Structaura currently ships an ESM browser package built for `wasm32-unknown-unknown`. It is intended for browsers and browser bundlers. The package is not a native Node.js implementation.
+The published package is an ESM browser build targeting `wasm32-unknown-unknown`. It is intended for browsers and browser bundlers. It is not a native Node.js implementation.
 
 ## Quick start
 
@@ -32,7 +32,7 @@ import {
   fingerprintJavaScript,
   fingerprintTypeScript,
   compareFingerprints,
-} from "structaura";
+} from "@weluvabid/structaura";
 
 await init();
 
@@ -60,63 +60,67 @@ const typed = fingerprintTypeScript("const count: number = 3;");
 console.log(typed.value);
 ```
 
-The generic entry point is also available:
+A generic entry point is also available:
 
 ```ts
-import { init, fingerprintSource } from "structaura";
+import { init, fingerprintSource } from "@weluvabid/structaura";
 
 await init();
 
 const result = fingerprintSource("const enabled = true;", "javascript");
-// Supported language identifiers: "javascript", "typescript".
+// Supported language identifiers: "javascript", "typescript"
 ```
 
-Initialization is asynchronous; fingerprint operations are synchronous after `await init()`. For large inputs, run fingerprinting in a Web Worker so parsing does not block the UI thread.
+`init()` is asynchronous and idempotent. Fingerprint operations are synchronous after initialization. For large inputs, run fingerprinting in a Web Worker so parsing does not block the UI thread.
 
 ## Fingerprint contract
 
 A fingerprint contains:
 
-- `value`: complete versioned fingerprint string.
-- `digest`: SHA-256 digest as 64 lowercase hexadecimal characters.
-- `language`: `javascript` or `typescript`.
-- `formatVersion`: fingerprint serialization format version.
-- `normalizationVersion`: language-specific canonicalization version.
+| Field                  | Description                                      |
+|------------------------|--------------------------------------------------|
+| `value`                | Complete versioned fingerprint string            |
+| `digest`               | SHA-256 digest (64 lowercase hex characters)     |
+| `language`             | `"javascript"` or `"typescript"`                 |
+| `formatVersion`        | Fingerprint serialization format version         |
+| `normalizationVersion` | Language-specific canonicalization version       |
 
 `compareFingerprints(left, right)` returns `true` or `false` for compatible fingerprints. It throws when format, language, or normalization versions differ. Do not compare only `digest` across different identities.
 
-See [the fingerprint contract](docs/fingerprint-contract.md) for the compatibility model and normalization boundaries.
+See [Fingerprint contract](docs/fingerprint-contract.md) for the full compatibility model and normalization boundaries.
 
 ## Architecture
 
-The Rust workspace is split by responsibility, with browser parsing handled by the official Tree-sitter WebAssembly runtime:
+The Rust workspace is split by responsibility. Browser parsing uses the official Tree-sitter WebAssembly runtime:
 
-| Crate | Responsibility |
-| --- | --- |
-| `structaura-core` | Canonical IR, deterministic encoding, Merkle hashing and fingerprint identity |
-| `structaura-javascript` | JavaScript parsing, diagnostics and canonicalization |
-| `structaura-typescript` | TypeScript parsing, diagnostics and canonicalization |
-| `structaura` | Unified Rust API and language dispatch |
-| `structaura-wasm` | Shared Rust canonicalization, Merkle hashing and wasm-bindgen API |
+| Crate                  | Responsibility                                                                 |
+|------------------------|---------------------------------------------------------------------------------|
+| `structaura-core`      | Canonical IR, deterministic encoding, Merkle hashing, fingerprint identity      |
+| `structaura-javascript`| JavaScript parsing, diagnostics, and syntax-record extraction                   |
+| `structaura-typescript`| TypeScript parsing, diagnostics, and syntax-record extraction                   |
+| `structaura`           | Unified native Rust API and language dispatch                                   |
+| `structaura-wasm`      | Shared Rust canonicalization + hashing exposed through `wasm-bindgen`           |
 
-The browser adapter uses `web-tree-sitter` to parse source and sends a flat preorder syntax representation into Rust WASM. Native Rust adapters and the browser package both use `structaura-core` for canonicalization and hashing. See [architecture](docs/architecture.md) and [WebAssembly package development](docs/wasm.md).
+The browser adapter uses `web-tree-sitter` to parse source and sends a flat preorder syntax representation into the Rust WASM module. Both the native adapters and the browser package use `structaura-core` for canonicalization and hashing.
+
+See [Architecture](docs/architecture.md) and [WebAssembly package](docs/wasm.md).
 
 ## Development
 
-Requirements:
+**Requirements**
 
-- Rust toolchain specified in `rust-toolchain.toml`.
-- `wasm32-unknown-unknown` Rust target.
-- Node.js 26+ and npm.
-- `wasm-pack`.
+- Rust toolchain from `rust-toolchain.toml`
+- `wasm32-unknown-unknown` target
+- Node.js 24+ and npm (development and release tooling only)
+- `wasm-pack`
 
-Run native checks:
+Native checks:
 
 ```sh
 ./scripts/check.sh
 ```
 
-Install the pinned JavaScript build dependencies, then build and test the browser package:
+Browser package build and tests:
 
 ```sh
 npm install
@@ -125,22 +129,18 @@ wasm-pack test --node crates/wasm
 npm test
 ```
 
-Build the browser package:
-
-```sh
-npm run build
-```
-
-The generated `pkg/` directory is intentionally ignored by Git. It is included in the npm package produced during publishing.
+The generated `pkg/` directory is intentionally ignored by Git. The `prepublishOnly` lifecycle runs the full native, WASM, grammar-build, and JavaScript integration checks, then builds the distributable assets. See [Release checklist](docs/release.md) before publishing.
 
 ## Benchmarks
-
-Run the end-to-end JavaScript and TypeScript fingerprinting benchmark in release mode:
 
 ```sh
 ./scripts/bench.sh
 ```
 
-The harness measures the public API across small, medium, and large generated source files. It reports source size, median latency, p95 sample latency, and input throughput. Each reported latency is the per-operation average within a sample; the median and p95 are calculated across 15 samples after five warm-up operations.
+The harness measures the public API across small, medium, and large generated source files. It reports source size, median latency, p95 sample latency, and input throughput. Each reported latency is the per-operation average within a sample; median and p95 are calculated across 15 samples after five warm-up operations.
 
-For comparable results, record `rustc -Vv`, the operating system, and CPU model, and run on an otherwise idle machine. Compare results from the same machine and toolchain. These numbers measure the full parse-to-fingerprint path; they are not isolated parser or hashing timings.
+For comparable results, record `rustc -Vv`, the operating system, and CPU model, and run on an otherwise idle machine. Compare results from the same machine and toolchain. These numbers measure the full parse-to-fingerprint path.
+
+## License
+
+StructAura is dual-licensed under either the [MIT License](LICENSE-MIT) or the [Apache License, Version 2.0](LICENSE-APACHE), at your option. Third-party components and their license notices are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

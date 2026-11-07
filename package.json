@@ -1,5 +1,5 @@
 {
-  "name": "structaura",
+  "name": "@weluvabid/structaura",
   "version": "0.1.0",
   "type": "module",
   "description": "Deterministic AST fingerprinting for JavaScript and TypeScript, powered by Rust and WebAssembly.",
@@ -8,8 +8,10 @@
     "pkg",
     "src",
     "README.md",
-    "docs",
-    "THIRD_PARTY_NOTICES.md"
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+    "THIRD_PARTY_NOTICES.md",
+    "docs"
   ],
   "types": "./src/index.d.ts",
   "exports": {
@@ -23,8 +25,9 @@
     "build:grammars": "sh scripts/build-grammars.sh",
     "build": "npm run build:wasm && npm run build:grammars",
     "test:wasm": "wasm-pack test --node crates/wasm",
-    "prepublishOnly": "npm run build",
-    "test": "node --test"
+    "prepublishOnly": "npm run release:verify",
+    "test": "node --test",
+    "release:verify": "./scripts/check.sh && npm run build && npm run test:wasm && npm test && npm pack --dry-run"
   },
   "dependencies": {
     "web-tree-sitter": "0.27.1"
@@ -32,9 +35,29 @@
   "devDependencies": {
     "tree-sitter-cli": "0.27.1"
   },
-  "license": "UNLICENSED",
-  "private": true,
+  "license": "MIT OR Apache-2.0",
   "allowScripts": {
     "tree-sitter-cli@0.27.1": true
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weluvabid/structaura.git"
+  },
+  "homepage": "https://github.com/weluvabid/structaura#readme",
+  "bugs": {
+    "url": "https://github.com/weluvabid/structaura/issues"
+  },
+  "keywords": [
+    "ast",
+    "fingerprinting",
+    "javascript",
+    "typescript",
+    "tree-sitter",
+    "webassembly",
+    "wasm",
+    "rust"
+  ]
 }

@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: 26
       - uses: Swatinem/rust-cache@v2
-      - run: npm install
+      - run: npm ci
       - name: Test WebAssembly bindings in Node.js
         run: wasm-pack test --node crates/wasm
       - name: Build browser package
