@@ -44,7 +44,7 @@ console.log(compareFingerprints(left, right));
 - Rust toolchain from `rust-toolchain.toml`
 - `wasm32-unknown-unknown` target
 - `wasm-pack`
-- Node.js 24+ and npm
+- Node.js 26 and npm
 - Git (for grammar generation)
 
 ```sh
@@ -67,3 +67,15 @@ The browser runtime needs to fetch:
 Initialization configures the runtime asset path relative to the published ESM entry point.
 
 For large inputs, execute fingerprinting in a Web Worker to avoid blocking the browser main thread.
+
+## Reproducibility and generated assets
+
+`scripts/build-grammars.sh` fetches the JavaScript grammar at `v0.23.1` and the TypeScript
+grammar at `v0.23.2`, then compiles them with the pinned Tree-sitter CLI dependency. The
+`web-tree-sitter` runtime is pinned in `package-lock.json`. These versions are part of the
+parser compatibility surface: grammar updates can change syntax trees and therefore
+fingerprints even when StructAura's Rust core is unchanged.
+
+The build script uses a temporary checkout and writes generated WASM assets and upstream
+license notices under `pkg/`. Review grammar/runtime upgrades with normalization-contract
+tests before changing pins. Do not edit generated `pkg/` assets by hand.

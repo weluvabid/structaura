@@ -87,7 +87,7 @@ A fingerprint contains:
 
 `compareFingerprints(left, right)` returns `true` or `false` for compatible fingerprints. It throws when format, language, or normalization versions differ. Do not compare only `digest` across different identities.
 
-See [Fingerprint contract](docs/fingerprint-contract.md) for the full compatibility model and normalization boundaries.
+The compatibility identity and normalization boundaries are defined in the [fingerprint contract](docs/fingerprint-contract.md).
 
 ## Architecture
 
@@ -103,7 +103,7 @@ The Rust workspace is split by responsibility. Browser parsing uses the official
 
 The browser adapter uses `web-tree-sitter` to parse source and sends a flat preorder syntax representation into the Rust WASM module. Both the native adapters and the browser package use `structaura-core` for canonicalization and hashing.
 
-See [Architecture](docs/architecture.md) and [WebAssembly package](docs/wasm.md).
+See the [architecture](docs/architecture.md), [error model](docs/error-model.md), and [WebAssembly build pipeline](docs/wasm.md).
 
 ## Development
 
@@ -111,7 +111,7 @@ See [Architecture](docs/architecture.md) and [WebAssembly package](docs/wasm.md)
 
 - Rust toolchain from `rust-toolchain.toml`
 - `wasm32-unknown-unknown` target
-- Node.js 24+ and npm (development and release tooling only)
+- Node.js 26 and npm (development and release tooling only)
 - `wasm-pack`
 
 Native checks:
@@ -129,7 +129,15 @@ wasm-pack test --node crates/wasm
 npm test
 ```
 
-The generated `pkg/` directory is intentionally ignored by Git. The `prepublishOnly` lifecycle runs the full native, WASM, grammar-build, and JavaScript integration checks, then builds the distributable assets. See [Release checklist](docs/release.md) before publishing.
+The generated `pkg/` directory is intentionally ignored by Git. `npm run release:verify` runs the native checks, builds the WASM and grammar assets, runs WASM and JavaScript integration tests, and validates the npm package contents. The same command runs automatically through `prepublishOnly`. See the [release procedure](docs/release.md) before publishing.
+
+Install the repository's pre-commit hook once per clone:
+
+```sh
+./scripts/install-hooks.sh
+```
+
+The hook runs formatting, Clippy with warnings denied, and the Rust workspace tests. CI remains authoritative and additionally validates the browser package and WASM integration.
 
 ## Benchmarks
 
