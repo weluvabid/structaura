@@ -1,6 +1,6 @@
 {
   "name": "@weluvabid/structaura",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Deterministic AST fingerprinting for JavaScript and TypeScript, powered by Rust and WebAssembly.",
   "sideEffects": false,
@@ -27,6 +27,7 @@
     "test:wasm": "wasm-pack test --node crates/wasm",
     "prepublishOnly": "npm run release:verify",
     "test": "node --test",
+    "prepack": "node -e \"require('node:fs').rmSync('pkg/.gitignore', { force: true })\"",
     "release:verify": "./scripts/check.sh && npm run build && npm run test:wasm && npm test && npm pack --dry-run"
   },
   "dependencies": {
