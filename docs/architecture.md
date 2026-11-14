@@ -29,7 +29,7 @@ versioned fingerprint
 | `crates/wasm`          | Shared Rust canonicalization and hashing functions via `wasm-bindgen` (does not link native Tree-sitter C grammar crates) |
 | `src/index.js`         | Browser parser initialization, syntax diagnostics, and extraction of the same flat syntax-record contract |
 
-The browser package uses the official `web-tree-sitter` runtime with grammar WASM modules built from pinned upstream grammar revisions. The browser and native paths deliberately have separate parser adapters but converge on the same core record contract; this keeps parser/runtime concerns out of the fingerprint format implementation.
+The browser package uses the official `web-tree-sitter` runtime with grammar WASM modules built from pinned upstream grammar revisions. The browser and native paths have separate parser adapters but converge on the same core record contract. This keeps parser and runtime concerns out of the fingerprint format implementation.
 
 ## Flat syntax boundary
 
