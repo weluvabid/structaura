@@ -2,6 +2,8 @@
 
 Deterministic AST fingerprinting for JavaScript and TypeScript.
 
+[Try StructAura in StackBlitz](https://stackblitz.com/edit/structaura?file=index.js)
+
 StructAura parses source into a syntax tree, applies a limited set of syntax-only normalizations, and produces a versioned SHA-256 Merkle fingerprint. Formatting and comments can change without changing the fingerprint; structural changes should change it.
 
 > **Scope:** StructAura is a structural fingerprinting tool. It is not a JavaScript runtime, type checker, semantic-equivalence prover, or source formatter.
@@ -129,7 +131,7 @@ wasm-pack test --node crates/wasm
 npm test
 ```
 
-The generated `pkg/` directory is intentionally ignored by Git. `npm run release:verify` runs the native checks, builds the WASM and grammar assets, runs WASM and JavaScript integration tests, and validates the npm package contents. The same command runs automatically through `prepublishOnly`. See the [release procedure](docs/release.md) before publishing.
+`npm run release:verify` runs the native checks, builds the WASM and grammar assets, runs WASM and JavaScript integration tests, and validates the npm package contents. The same command runs automatically through `prepublishOnly`.
 
 Install the repository's pre-commit hook once per clone:
 

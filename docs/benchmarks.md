@@ -58,7 +58,7 @@ To capture a fresh run:
 ./scripts/bench.sh 2>&1 | tee benchmark-results.txt
 ```
 
-The recorded values above come from a relatively few of benchmark runs.
+The recorded values above come from a relatively small number of benchmark runs.
 
 For repeatable comparisons, use the same source fixtures, Rust toolchain, build profile, and
 measurement procedure across runs. Compare like-for-like results and retain the raw output with
